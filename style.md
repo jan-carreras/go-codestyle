@@ -1,164 +1,18 @@
-<!--
+# Go Style Guide
 
-Editing this document:
-
-- Discuss all changes in GitHub issues first.
-- Update the table of contents as new sections are added or removed.
-- Use tables for side-by-side code samples. See below.
-
-Code Samples:
-
-Use 2 spaces to indent. Horizontal real estate is important in side-by-side
-samples.
-
-For side-by-side code samples, use the following snippet.
-
-~~~
-<table>
-<thead><tr><th>Bad</th><th>Good</th></tr></thead>
-<tbody>
-<tr><td>
-
-```go
-BAD CODE GOES HERE
-```
-
-</td><td>
-
-```go
-GOOD CODE GOES HERE
-```
-
-</td></tr>
-</tbody></table>
-~~~
-
-(You need the empty lines between the <td> and code samples for it to be
-treated as Markdown.)
-
-If you need to add labels or descriptions below the code samples, add another
-row before the </tbody></table> line.
-
-~~~
-<tr>
-<td>DESCRIBE BAD CODE</td>
-<td>DESCRIBE GOOD CODE</td>
-</tr>
-~~~
-
--->
-
-# Uber Go Style Guide
 
 ## Table of Contents
 
-- [Introduction](#introduction)
-- [Guidelines](#guidelines)
-  - [Pointers to Interfaces](#pointers-to-interfaces)
-  - [Verify Interface Compliance](#verify-interface-compliance)
-  - [Receivers and Interfaces](#receivers-and-interfaces)
-  - [Zero-value Mutexes are Valid](#zero-value-mutexes-are-valid)
-  - [Copy Slices and Maps at Boundaries](#copy-slices-and-maps-at-boundaries)
-  - [Defer to Clean Up](#defer-to-clean-up)
-  - [Channel Size is One or None](#channel-size-is-one-or-none)
-  - [Start Enums at One](#start-enums-at-one)
-  - [Use `"time"` to handle time](#use-time-to-handle-time)
-  - [Errors](#errors)
-    - [Error Types](#error-types)
-    - [Error Wrapping](#error-wrapping)
-    - [Error Naming](#error-naming)
-  - [Handle Type Assertion Failures](#handle-type-assertion-failures)
-  - [Don't Panic](#dont-panic)
-  - [Use go.uber.org/atomic](#use-gouberorgatomic)
-  - [Avoid Mutable Globals](#avoid-mutable-globals)
-  - [Avoid Embedding Types in Public Structs](#avoid-embedding-types-in-public-structs)
-  - [Avoid Using Built-In Names](#avoid-using-built-in-names)
-  - [Avoid `init()`](#avoid-init)
-  - [Exit in Main](#exit-in-main)
-    - [Exit Once](#exit-once)
-  - [Use field tags in marshaled structs](#use-field-tags-in-marshaled-structs)
-  - [Don't fire-and-forget goroutines](#dont-fire-and-forget-goroutines)
-    - [Wait for goroutines to exit](#wait-for-goroutines-to-exit)
-    - [No goroutines in `init()`](#no-goroutines-in-init)
-- [Performance](#performance)
-  - [Prefer strconv over fmt](#prefer-strconv-over-fmt)
-  - [Avoid string-to-byte conversion](#avoid-string-to-byte-conversion)
-  - [Prefer Specifying Container Capacity](#prefer-specifying-container-capacity)
-      - [Specifying Map Capacity Hints](#specifying-map-capacity-hints)
-      - [Specifying Slice Capacity](#specifying-slice-capacity)
-- [Style](#style)
-  - [Avoid overly long lines](#avoid-overly-long-lines)
-  - [Be Consistent](#be-consistent)
-  - [Group Similar Declarations](#group-similar-declarations)
-  - [Import Group Ordering](#import-group-ordering)
-  - [Package Names](#package-names)
-  - [Function Names](#function-names)
-  - [Import Aliasing](#import-aliasing)
-  - [Function Grouping and Ordering](#function-grouping-and-ordering)
-  - [Reduce Nesting](#reduce-nesting)
-  - [Unnecessary Else](#unnecessary-else)
-  - [Top-level Variable Declarations](#top-level-variable-declarations)
-  - [Prefix Unexported Globals with _](#prefix-unexported-globals-with-_)
-  - [Embedding in Structs](#embedding-in-structs)
-  - [Local Variable Declarations](#local-variable-declarations)
-  - [nil is a valid slice](#nil-is-a-valid-slice)
-  - [Reduce Scope of Variables](#reduce-scope-of-variables)
-  - [Avoid Naked Parameters](#avoid-naked-parameters)
-  - [Use Raw String Literals to Avoid Escaping](#use-raw-string-literals-to-avoid-escaping)
-  - [Initializing Structs](#initializing-structs)
-      - [Use Field Names to Initialize Structs](#use-field-names-to-initialize-structs)
-      - [Omit Zero Value Fields in Structs](#omit-zero-value-fields-in-structs)
-      - [Use `var` for Zero Value Structs](#use-var-for-zero-value-structs)
-      - [Initializing Struct References](#initializing-struct-references)
-  - [Initializing Maps](#initializing-maps)
-  - [Format Strings outside Printf](#format-strings-outside-printf)
-  - [Naming Printf-style Functions](#naming-printf-style-functions)
-- [Patterns](#patterns)
-  - [Test Tables](#test-tables)
-  - [Functional Options](#functional-options)
-- [Linting](#linting)
+__TOC__
 
 ## Introduction
 
-Styles are the conventions that govern our code. The term style is a bit of a
-misnomer, since these conventions cover far more than just source file
-formatting—gofmt handles that for us.
+[Original Uber Introduction](https://github.com/uber-go/guide/blob/master/style.md#introduction)
 
-The goal of this guide is to manage this complexity by describing in detail the
-Dos and Don'ts of writing Go code at Uber. These rules exist to keep the code
-base manageable while still allowing engineers to use Go language features
-productively.
-
-This guide was originally created by [Prashant Varanasi] and [Simon Newton] as
-a way to bring some colleagues up to speed with using Go. Over the years it has
-been amended based on feedback from others.
-
-  [Prashant Varanasi]: https://github.com/prashantv
-  [Simon Newton]: https://github.com/nomis52
-
-This documents idiomatic conventions in Go code that we follow at Uber. A lot
-of these are general guidelines for Go, while others extend upon external
-resources:
-
-1. [Effective Go](https://golang.org/doc/effective_go.html)
-2. [Go Common Mistakes](https://github.com/golang/go/wiki/CommonMistakes)
-3. [Go Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments)
-
-We aim for the code samples to be accurate for the two most recent minor versions
-of Go [releases](https://go.dev/doc/devel/release).
-
-All code should be error-free when run through `golint` and `go vet`. We
-recommend setting up your editor to:
-
-- Run `goimports` on save
-- Run `golint` and `go vet` to check for errors
-
-You can find information in editor support for Go tools here:
-<https://github.com/golang/go/wiki/IDEsAndTextEditorPlugins>
 
 ## Guidelines
 
-### Pointers to Interfaces
+### ✅ Never use Pointers to Interfaces
 
 You almost never need a pointer to an interface. You should be passing
 interfaces as values—the underlying data can still be a pointer.
@@ -173,80 +27,10 @@ An interface is two fields:
 If you want interface methods to modify the underlying data, you must use a
 pointer.
 
-### Verify Interface Compliance
 
-Verify interface compliance at compile time where appropriate. This includes:
+### 🟡 Receivers and Interfaces
 
-- Exported types that are required to implement specific interfaces as part of
-  their API contract
-- Exported or unexported types that are part of a collection of types
-  implementing the same interface
-- Other cases where violating an interface would break users
-
-<table>
-<thead><tr><th>Bad</th><th>Good</th></tr></thead>
-<tbody>
-<tr><td>
-
-```go
-type Handler struct {
-  // ...
-}
-
-
-
-func (h *Handler) ServeHTTP(
-  w http.ResponseWriter,
-  r *http.Request,
-) {
-  ...
-}
-```
-
-</td><td>
-
-```go
-type Handler struct {
-  // ...
-}
-
-var _ http.Handler = (*Handler)(nil)
-
-func (h *Handler) ServeHTTP(
-  w http.ResponseWriter,
-  r *http.Request,
-) {
-  // ...
-}
-```
-
-</td></tr>
-</tbody></table>
-
-The statement `var _ http.Handler = (*Handler)(nil)` will fail to compile if
-`*Handler` ever stops matching the `http.Handler` interface.
-
-The right hand side of the assignment should be the zero value of the asserted
-type. This is `nil` for pointer types (like `*Handler`), slices, and maps, and
-an empty struct for struct types.
-
-```go
-type LogHandler struct {
-  h   http.Handler
-  log *zap.Logger
-}
-
-var _ http.Handler = LogHandler{}
-
-func (h LogHandler) ServeHTTP(
-  w http.ResponseWriter,
-  r *http.Request,
-) {
-  // ...
-}
-```
-
-### Receivers and Interfaces
+> Structs should either use value or pointers receivers.
 
 Methods with value receivers can be called on pointers as well as values.
 Methods with pointer receivers can only be called on pointers or [addressable values].
@@ -317,7 +101,7 @@ Effective Go has a good write up on [Pointers vs. Values].
 
   [Pointers vs. Values]: https://golang.org/doc/effective_go.html#pointers_vs_values
 
-### Zero-value Mutexes are Valid
+### 🟢 Zero-value Mutexes are Valid
 
 The zero-value of `sync.Mutex` and `sync.RWMutex` is valid, so you almost
 never need a pointer to a mutex.
@@ -409,12 +193,12 @@ callers.
 </td></tr>
 </tbody></table>
 
-### Copy Slices and Maps at Boundaries
+### 🟢 Copy Slices and Maps at Boundaries
 
 Slices and maps contain pointers to the underlying data so be wary of scenarios
 when they need to be copied.
 
-#### Receiving Slices and Maps
+#### 🟢 Receiving Slices and Maps
 
 Keep in mind that users can modify a map or slice you received as an argument
 if you store a reference to it.
@@ -459,7 +243,7 @@ trips[0] = ...
 </tbody>
 </table>
 
-#### Returning Slices and Maps
+#### 🟢 Returning Slices and Maps
 
 Similarly, be wary of user modifications to maps or slices exposing internal
 state.
@@ -514,7 +298,7 @@ snapshot := stats.Snapshot()
 </td></tr>
 </tbody></table>
 
-### Defer to Clean Up
+### 🟢 Defer to Clean Up
 
 Use defer to clean up resources such as files and locks.
 
@@ -564,7 +348,7 @@ readability win of using defers is worth the miniscule cost of using them. This
 is especially true for larger methods that have more than simple memory
 accesses, where the other computations are more significant than the `defer`.
 
-### Channel Size is One or None
+### 🟢 Channel Size is One or None
 
 Channels should usually have a size of one or be unbuffered. By default,
 channels are unbuffered and have a size of zero. Any other size
@@ -594,11 +378,42 @@ c := make(chan int)
 </td></tr>
 </tbody></table>
 
-### Start Enums at One
+### 🟢 Enums indexes
 
-The standard way of introducing enumerations in Go is to declare a custom type
+#### 🟢 Start 0 as Unespecified or Default value
+
+Define the 0 index as Unespecified. See [Google's Protobufer style guide for enums](https://developers.google.com/protocol-buffers/docs/style#enums):
+
+```protobuf
+enum FooBar {
+  FOO_BAR_UNSPECIFIED = 0;
+  FOO_BAR_FIRST_VALUE = 1;
+  FOO_BAR_SECOND_VALUE = 2;
+}
+```
+
+There are cases where using the zero value makes sense, for example when the
+zero value case is the desirable default behavior.
+
+```go
+type LogOutput int
+
+const (
+  LogToStdout LogOutput = iota
+  LogToFile
+  LogToRemote
+)
+
+// LogToStdout=0, LogToFile=1, LogToRemote=2
+```
+
+
+
+#### 🔴 Start at 1
+
+~~The standard way of introducing enumerations in Go is to declare a custom type
 and a `const` group with `iota`. Since variables have a 0 default value, you
-should usually start your enums on a non-zero value.
+should usually start your enums on a non-zero value.~~
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -634,22 +449,7 @@ const (
 </td></tr>
 </tbody></table>
 
-There are cases where using the zero value makes sense, for example when the
-zero value case is the desirable default behavior.
-
-```go
-type LogOutput int
-
-const (
-  LogToStdout LogOutput = iota
-  LogToFile
-  LogToRemote
-)
-
-// LogToStdout=0, LogToFile=1, LogToRemote=2
-```
-
-### Use `"time"` to handle time
+### 🟢 Use `"time"` to handle time
 
 Time is complicated. Incorrect assumptions often made about time include the
 following.
@@ -668,7 +468,7 @@ helps deal with these incorrect assumptions in a safer, more accurate manner.
 
   [`"time"`]: https://golang.org/pkg/time/
 
-#### Use `time.Time` for instants of time
+#### 🟢 Use `time.Time` for instants of time
 
 Use [`time.Time`] when dealing with instants of time, and the methods on
 `time.Time` when comparing, adding, or subtracting time.
@@ -697,7 +497,7 @@ func isActive(now, start, stop time.Time) bool {
 </td></tr>
 </tbody></table>
 
-#### Use `time.Duration` for periods of time
+#### 🟢 Use `time.Duration` for periods of time
 
 Use [`time.Duration`] when dealing with periods of time.
 
@@ -749,7 +549,7 @@ newDay := t.AddDate(0 /* years */, 0 /* months */, 1 /* days */)
 maybeNewDay := t.Add(24 * time.Hour)
 ```
 
-#### Use `time.Time` and `time.Duration` with external systems
+#### 🟢 Use `time.Time` and `time.Duration` with external systems
 
 Use `time.Duration` and `time.Time` in interactions with external systems when
 possible. For example:
@@ -824,25 +624,25 @@ seconds that may have occurred between those two instants.
 
 #### Error Types
 
-There are few options for declaring errors.
-Consider the following before picking the option best suited for your use case.
+There are few options for declaring errors. Consider the following before picking the option best suited for your use case.
 
-- Does the caller need to match the error so that they can handle it?
+- 🟢 Does the caller need to match the error so that they can handle it?
   If yes, we must support the [`errors.Is`] or [`errors.As`] functions
   by declaring a top-level error variable or a custom type.
 - Is the error message a static string,
   or is it a dynamic string that requires contextual information?
-  For the former, we can use [`errors.New`], but for the latter we must
-  use [`fmt.Errorf`] or a custom error type.
+  Declare a generic error using `var` and use fmt.Errorf to wrap it with extra information.
 - Are we propagating a new error returned by a downstream function?
   If so, see the [section on error wrapping](#error-wrapping).
+
+> Personal preference: declare the error using `var`, either publicly or privately. Avoids error duplication in the codebase. Helps tracking where a specific error is used in a library/module/etc...
 
 [`errors.Is`]: https://golang.org/pkg/errors/#Is
 [`errors.As`]: https://golang.org/pkg/errors/#As
 
 | Error matching? | Error Message | Guidance                            |
 |-----------------|---------------|-------------------------------------|
-| No              | static        | [`errors.New`]                      |
+| ~~No~~          | ~~static~~    | ~~[`errors.New`]~~                  |
 | No              | dynamic       | [`fmt.Errorf`]                      |
 | Yes             | static        | top-level `var` with [`errors.New`] |
 | Yes             | dynamic       | custom `error` type                 |
@@ -850,13 +650,12 @@ Consider the following before picking the option best suited for your use case.
 [`errors.New`]: https://golang.org/pkg/errors/#New
 [`fmt.Errorf`]: https://golang.org/pkg/fmt/#Errorf
 
-For example,
-use [`errors.New`] for an error with a static string.
+For example, use [`errors.New`] for an error with a static string.
 Export this error as a variable to support matching it with `errors.Is`
 if the caller needs to match and handle this error.
 
 <table>
-<thead><tr><th>No error matching</th><th>Error matching</th></tr></thead>
+<thead><tr><th>Bad: No error matching</th><th>Good: Error matching</th></tr></thead>
 <tbody>
 <tr><td>
 
@@ -960,7 +759,7 @@ if err := foo.Open("testfile.txt"); err != nil {
 Note that if you export error variables or types from a package,
 they will become part of the public API of the package.
 
-#### Error Wrapping
+#### 🟢 Error Wrapping
 
 There are three main options for propagating errors if a call fails:
 
@@ -1041,7 +840,78 @@ See also [Don't just check errors, handle them gracefully].
   [`"pkg/errors".Cause`]: https://godoc.org/github.com/pkg/errors#Cause
   [Don't just check errors, handle them gracefully]: https://dave.cheney.net/2016/04/27/dont-just-check-errors-handle-them-gracefully
 
-#### Error Naming
+#### 🟢 Error Stacktraces
+
+Having an "error stacktrace" is useful for debugging. This can be achieved by using error wrapping mentioning the function name that has failed:
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td>
+
+```go
+s, err := store.New()
+if err != nil {
+    return err
+}
+```
+
+</td><td>
+
+```go
+s, err := store.New()
+if err != nil {
+    return fmt.Errorf("store.New: %w", err)
+}
+```
+
+</td></tr>
+</tbody></table>
+
+If various calls to the same function are being made, you must differentiate them be adding some extra information.
+
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td>
+
+```go
+ev1 := Event{...}
+ev2 := Event{...}
+
+err := s.publishEvent(ev1)
+if err != nil {
+    return fmt.Errorf("publishEvent: %w", err) 
+}
+
+err := s.publishEvent(ev2)
+if err != nil {
+    return fmt.Errorf("publishEvent: %w", err) // From the stacktrace we cannot know which event has failed to be published
+}
+```
+
+</td><td>
+
+```go
+ev1 := Event{...}
+ev2 := Event{...}
+
+err := s.publishEvent(ev1)
+if err != nil {
+    return fmt.Errorf("publishEvent(ev1): %w", err) 
+}
+
+err := s.publishEvent(ev2)
+if err != nil {
+    return fmt.Errorf("publishEvent(ev2): %w", err) // Now we know which event has failed
+}
+```
+
+</td></tr>
+</tbody></table>
+
+#### 🟢 Error Naming
 
 For error values stored as global variables,
 use the prefix `Err` or `err` depending on whether they're exported.
@@ -1094,7 +964,7 @@ func (e *resolveError) Error() string {
 }
 ```
 
-### Handle Type Assertion Failures
+### 🟢 Handle Type Assertion Failures
 
 The single return value form of a [type assertion] will panic on an incorrect
 type. Therefore, always use the "comma ok" idiom.
@@ -1125,7 +995,7 @@ if !ok {
 <!-- TODO: There are a few situations where the single assignment form is
 fine. -->
 
-### Don't Panic
+### 🟢 Don't Panic
 
 Code running in production must avoid panics. Panics are a major source of
 [cascading failures]. If an error occurs, the function must return an error and
@@ -1215,11 +1085,10 @@ if err != nil {
 
 <!-- TODO: Explain how to use _test packages. -->
 
-### Use go.uber.org/atomic
+### 🟢 Use go.uber.org/atomic
 
 Atomic operations with the [sync/atomic] package operate on the raw types
-(`int32`, `int64`, etc.) so it is easy to forget to use the atomic operation to
-read or modify the variables.
+(`int32`, `int64`, etc.) so it is easy to forget to use the atomic operation to read or modify the variables.
 
 [go.uber.org/atomic] adds type safety to these operations by hiding the
 underlying type. Additionally, it includes a convenient `atomic.Bool` type.
@@ -1273,7 +1142,7 @@ func (f *foo) isRunning() bool {
 </td></tr>
 </tbody></table>
 
-### Avoid Mutable Globals
+### 🟢 Avoid Mutable Globals
 
 Avoid mutating global variables, instead opting for dependency injection.
 This applies to function pointers as well as other kinds of values.
@@ -1349,7 +1218,7 @@ func TestSigner(t *testing.T) {
 </td></tr>
 </tbody></table>
 
-### Avoid Embedding Types in Public Structs
+### 🟢 Avoid Embedding Types in Public Structs
 
 These embedded types leak implementation details, inhibit type evolution, and
 obscure documentation.
@@ -1420,7 +1289,7 @@ So, if the embedded type is public, the field is public.
 To maintain backward compatibility, every future version of the outer type must
 keep the embedded type.
 
-An embedded type is rarely necessary.
+**An embedded type is rarely necessary**.
 It is a convenience that helps you avoid writing tedious delegate methods.
 
 Even embedding a compatible AbstractList *interface*, instead of the struct,
@@ -1482,7 +1351,7 @@ an implementation detail, leaves more opportunities for change, and also
 eliminates indirection for discovering the full List interface in
 documentation.
 
-### Avoid Using Built-In Names
+### 🟢 Avoid Using Built-In Names
 
 The Go [language specification] outlines several built-in,
 [predeclared identifiers] that should not be used as names within Go programs.
@@ -1577,7 +1446,7 @@ Note that the compiler will not generate errors when using predeclared
 identifiers, but tools such as `go vet` should correctly point out these and
 other cases of shadowing.
 
-### Avoid `init()`
+### 🟢 Avoid `init()`
 
 Avoid `init()` where possible. When `init()` is unavoidable or desirable, code
 should attempt to:
@@ -1694,7 +1563,7 @@ necessary might include:
 
   [Google Cloud Functions]: https://cloud.google.com/functions/docs/bestpractices/tips#use_global_variables_to_reuse_objects_in_future_invocations
 
-### Exit in Main
+### 🟢 Exit in Main
 
 Go programs use [`os.Exit`] or [`log.Fatal*`] to exit immediately. (Panicking
 is not a good way to exit programs, please [don't panic](#dont-panic).)
@@ -1771,7 +1640,7 @@ Rationale: Programs with multiple functions that exit present a few issues:
   enqueued with `defer` statements. This adds risk of skipping important
   cleanup tasks.
 
-#### Exit Once
+#### 🟢 Exit Once
 
 If possible, prefer to call `os.Exit` or `log.Fatal` **at most once** in your
 `main()`. If there are multiple error scenarios that halt program execution,
@@ -1849,7 +1718,7 @@ func run() error {
 </td></tr>
 </tbody></table>
 
-### Use field tags in marshaled structs
+### 🟢 Use field tags in marshaled structs
 
 Any struct field that is marshaled into JSON, YAML,
 or other formats that support tag-based field naming
@@ -1897,7 +1766,7 @@ this contract. Specifying field names inside tags makes the contract explicit,
 and it guards against accidentally breaking the contract by refactoring or
 renaming fields.
 
-### Don't fire-and-forget goroutines
+### 🟢 Don't fire-and-forget goroutines
 
 Goroutines are lightweight, but they're not free:
 at minimum, they cost memory for their stack and CPU to be scheduled.
@@ -1977,13 +1846,13 @@ and we can wait for it to exit with `<-done`.
 </td></tr>
 </tbody></table>
 
-#### Wait for goroutines to exit
+#### 🟢 Wait for goroutines to exit
 
 Given a goroutine spawned by the system,
 there must be a way to wait for the goroutine to exit.
 There are two popular ways to do this:
 
-- Use a `sync.WaitGroup`.
+- 🟢 Use a `sync.WaitGroup`.
   Do this if there are multiple goroutines that you want to wait for
 
     ```go
@@ -2000,7 +1869,7 @@ There are two popular ways to do this:
     wg.Wait()
     ```
 
-- Add another `chan struct{}` that the goroutine closes when it's done.
+- 🟡 Add another `chan struct{}` that the goroutine closes when it's done.
   Do this if there's only one goroutine.
 
     ```go
@@ -2014,7 +1883,7 @@ There are two popular ways to do this:
     <-done
     ```
 
-#### No goroutines in `init()`
+#### 🟢 No goroutines in `init()`
 
 `init()` functions should not spawn goroutines.
 See also [Avoid init()](#avoid-init).
@@ -2093,11 +1962,86 @@ See [Wait for goroutines to exit](#wait-for-goroutines-to-exit).
 </td></tr>
 </tbody></table>
 
+### 🟡 Verify Interface Compliance
+
+| If the interface and implementation is in the same codebase, there is no need to have Interface Compliance. Code won't compile anyways.
+
+Verify interface compliance at compile time where appropriate. This includes:
+
+- Exported types that are required to implement specific interfaces as part of
+  their API contract
+- Exported or unexported types that are part of a collection of types
+  implementing the same interface
+- Other cases where violating an interface would break users
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td>
+
+```go
+type Handler struct {
+  // ...
+}
+
+
+
+func (h *Handler) ServeHTTP(
+  w http.ResponseWriter,
+  r *http.Request,
+) {
+  ...
+}
+```
+
+</td><td>
+
+```go
+type Handler struct {
+  // ...
+}
+
+var _ http.Handler = (*Handler)(nil)
+
+func (h *Handler) ServeHTTP(
+  w http.ResponseWriter,
+  r *http.Request,
+) {
+  // ...
+}
+```
+
+</td></tr>
+</tbody></table>
+
+The statement `var _ http.Handler = (*Handler)(nil)` will fail to compile if
+`*Handler` ever stops matching the `http.Handler` interface.
+
+The right hand side of the assignment should be the zero value of the asserted
+type. This is `nil` for pointer types (like `*Handler`), slices, and maps, and
+an empty struct for struct types.
+
+```go
+type LogHandler struct {
+  h   http.Handler
+  log *zap.Logger
+}
+
+var _ http.Handler = LogHandler{}
+
+func (h LogHandler) ServeHTTP(
+  w http.ResponseWriter,
+  r *http.Request,
+) {
+  // ...
+}
+```
+
 ## Performance
 
 Performance-specific guidelines apply only to the hot path.
 
-### Prefer strconv over fmt
+### 🟢 Prefer strconv over fmt
 
 When converting primitives to/from strings, `strconv` is faster than
 `fmt`.
@@ -2137,7 +2081,7 @@ BenchmarkStrconv-4    64.2 ns/op    1 allocs/op
 </td></tr>
 </tbody></table>
 
-### Avoid string-to-byte conversion
+### 🟢 Avoid string-to-byte conversion
 
 Do not create byte slices from a fixed string repeatedly. Instead, perform the
 conversion once and capture the result.
@@ -2178,13 +2122,13 @@ BenchmarkGood-4  500000000   3.25 ns/op
 </td></tr>
 </tbody></table>
 
-### Prefer Specifying Container Capacity
+### 🟢 Prefer Specifying Container Capacity
 
 Specify container capacity where possible in order to allocate memory for the
 container up front. This minimizes subsequent allocations (by copying and
 resizing of the container) as elements are added.
 
-#### Specifying Map Capacity Hints
+#### 🟢 Specifying Map Capacity Hints
 
 Where possible, provide capacity hints when initializing
 maps with `make()`.
@@ -2242,7 +2186,7 @@ allocations at assignment time.
 </td></tr>
 </tbody></table>
 
-#### Specifying Slice Capacity
+#### 🟢 Specifying Slice Capacity
 
 Where possible, provide capacity hints when initializing slices with `make()`,
 particularly when appending.
@@ -2300,7 +2244,7 @@ BenchmarkGood-4   100000000    0.21s
 
 ## Style
 
-### Avoid overly long lines
+### 🟢 Avoid overly long lines
 
 Avoid lines of code that require readers to scroll horizontally
 or turn their heads too much.
@@ -2310,7 +2254,7 @@ Authors should aim to wrap lines before hitting this limit,
 but it is not a hard limit.
 Code is allowed to exceed this limit.
 
-### Be Consistent
+### 🟢 Be Consistent
 
 Some of the guidelines outlined in this document can be evaluated objectively;
 others are situational, contextual, or subjective.
@@ -2330,7 +2274,7 @@ When applying these guidelines to a codebase, it is recommended that changes
 are made at a package (or larger) level: application at a sub-package level
 violates the above concern by introducing multiple styles into the same code.
 
-### Group Similar Declarations
+### 🟡 Group Similar Declarations
 
 Go supports grouping similar declarations.
 
@@ -2509,7 +2453,7 @@ func (c *client) request() {
 </td></tr>
 </tbody></table>
 
-### Import Group Ordering
+### 🟢 Import Group Ordering
 
 There should be two import groups:
 
@@ -2547,7 +2491,7 @@ import (
 </td></tr>
 </tbody></table>
 
-### Package Names
+### 🟢 Package Names
 
 When naming packages, choose a name that is:
 
@@ -2563,7 +2507,7 @@ See also [Package Names] and [Style guideline for Go packages].
   [Package Names]: https://blog.golang.org/package-names
   [Style guideline for Go packages]: https://rakyll.org/style-packages/
 
-### Function Names
+### 🟢 Function Names
 
 We follow the Go community's convention of using [MixedCaps for function
 names]. An exception is made for test functions, which may contain underscores
@@ -2572,7 +2516,7 @@ for the purpose of grouping related test cases, e.g.,
 
   [MixedCaps for function names]: https://golang.org/doc/effective_go.html#mixed-caps
 
-### Import Aliasing
+### 🟢 Import Aliasing
 
 Import aliasing must be used if the package name does not match the last
 element of the import path.
@@ -2630,7 +2574,7 @@ Therefore, exported functions should appear first in a file, after
 A `newXYZ()`/`NewXYZ()` may appear after the type is defined, but before the
 rest of the methods on the receiver.
 
-Since functions are grouped by receiver, plain utility functions should appear
+Since functions are grouped by receiver, plain/private utility functions should appear
 towards the end of the file.
 
 <table>
@@ -2675,7 +2619,7 @@ func calcCost(n []int) int {...}
 </td></tr>
 </tbody></table>
 
-### Reduce Nesting
+### 🟢 Reduce Nesting
 
 Code should reduce nesting where possible by handling error cases/special
 conditions first and returning early or continuing the loop. Reduce the amount
@@ -2721,7 +2665,7 @@ for _, v := range data {
 </td></tr>
 </tbody></table>
 
-### Unnecessary Else
+### 🟢 Unnecessary Else
 
 If a variable is set in both branches of an if, it can be replaced with a
 single if.
@@ -2752,7 +2696,7 @@ if b {
 </td></tr>
 </tbody></table>
 
-### Top-level Variable Declarations
+### 🟢 Top-level Variable Declarations
 
 At the top level, use the standard `var` keyword. Do not specify the type,
 unless it is not the same type as the expression.
@@ -2795,7 +2739,7 @@ var _e error = F()
 // F returns an object of type myError but we want error.
 ```
 
-### Prefix Unexported Globals with _
+### 🟡 Prefix Unexported Globals with _
 
 Prefix unexported top-level `var`s and `const`s with `_` to make it clear when
 they are used that they are global symbols.
@@ -2846,7 +2790,7 @@ const (
 **Exception**: Unexported error values may use the prefix `err` without the underscore.
 See [Error Naming](#error-naming).
 
-### Embedding in Structs
+### 🟡 Embedding in Structs
 
 Embedded types should be at the top of the field list of a
 struct, and there must be an empty line separating embedded fields from regular
@@ -3006,7 +2950,7 @@ type Client struct {
 </td></tr>
 </tbody></table>
 
-### Local Variable Declarations
+### 🟢 Local Variable Declarations
 
 Short variable declarations (`:=`) should be used if a variable is being set to
 some value explicitly.
@@ -3066,7 +3010,7 @@ func f(list []int) {
 </td></tr>
 </tbody></table>
 
-### nil is a valid slice
+### 🟢 nil is a valid slice
 
 `nil` is a valid slice of length 0. This means that,
 
@@ -3162,7 +3106,7 @@ Remember that, while it is a valid slice, a nil slice is not equivalent to an
 allocated slice of length 0 - one is nil and the other is not - and the two may
 be treated differently in different situations (such as serialization).
 
-### Reduce Scope of Variables
+### 🟢 Reduce Scope of Variables
 
 Where possible, reduce scope of variables. Do not reduce the scope if it
 conflicts with [Reduce Nesting](#reduce-nesting).
@@ -3231,7 +3175,7 @@ return nil
 </td></tr>
 </tbody></table>
 
-### Avoid Naked Parameters
+### 🟢 Avoid Naked Parameters
 
 Naked parameters in function calls can hurt readability. Add C-style comments
 (`/* ... */`) for parameter names when their meaning is not obvious.
@@ -3281,7 +3225,7 @@ const (
 func printInfo(name string, region Region, status Status)
 ```
 
-### Use Raw String Literals to Avoid Escaping
+### 🟢 Use Raw String Literals to Avoid Escaping
 
 Go supports [raw string literals](https://golang.org/ref/spec#raw_string_lit),
 which can span multiple lines and include quotes. Use these to avoid
@@ -3305,9 +3249,9 @@ wantError := `unknown error:"test"`
 </td></tr>
 </tbody></table>
 
-### Initializing Structs
+### 🟢 Initializing Structs
 
-#### Use Field Names to Initialize Structs
+#### 🟢 Use Field Names to Initialize Structs
 
 You should almost always specify field names when initializing structs. This is
 now enforced by [`go vet`].
@@ -3349,7 +3293,7 @@ tests := []struct{
 }
 ```
 
-#### Omit Zero Value Fields in Structs
+#### 🟢 Omit Zero Value Fields in Structs
 
 When initializing structs with field names, omit fields that have zero values
 unless they provide meaningful context. Otherwise, let Go set these to zero
@@ -3398,7 +3342,25 @@ tests := []struct{
 }
 ```
 
-#### Use `var` for Zero Value Structs
+> An exception to this rule would be when you want to explicitely signal that
+> you're using the zero-value of that field. Eg:
+> 
+
+```go
+v := Validator{
+   Name: "John",
+   Surname: "Doe",
+   Age: 0, // Intentionally zero
+}
+
+err := v.Validate()
+if !errors.Is(err, InvalidAge) {
+	...
+}
+
+```
+
+#### 🟢 Use `var` for Zero Value Structs
 
 When all the fields of a struct are omitted in a declaration, use the `var`
 form to declare the struct.
@@ -3427,7 +3389,7 @@ we prefer to [declare empty slices][Declaring Empty Slices].
 
   [map initialization]: #initializing-maps
 
-#### Initializing Struct References
+#### 🟢 Initializing Struct References
 
 Use `&T{}` instead of `new(T)` when initializing struct references so that it
 is consistent with the struct initialization.
@@ -3456,7 +3418,7 @@ sptr := &T{Name: "bar"}
 </td></tr>
 </tbody></table>
 
-### Initializing Maps
+### 🟢 Initializing Maps
 
 Prefer `make(..)` for empty maps, and maps populated
 programmatically. This makes map initialization visually
@@ -3538,7 +3500,7 @@ The basic rule of thumb is to use map literals when adding a fixed set of
 elements at initialization time, otherwise use `make` (and specify a size hint
 if available).
 
-### Format Strings outside Printf
+### 🟢 Format Strings outside Printf
 
 If you declare format strings for `Printf`-style functions outside a string
 literal, make them `const` values.
@@ -3565,7 +3527,7 @@ fmt.Printf(msg, 1, 2)
 </td></tr>
 </tbody></table>
 
-### Naming Printf-style Functions
+### 🟡 Naming Printf-style Functions
 
 When you declare a `Printf`-style function, make sure that `go vet` can detect
 it and check the format string.
@@ -3590,7 +3552,7 @@ See also [go vet: Printf family check].
 
 ## Patterns
 
-### Test Tables
+### 🟢 Test Tables
 
 Use table-driven tests with [subtests] to avoid duplicating code when the core
 test logic is repetitive.
@@ -3719,7 +3681,7 @@ iteration because of the use of `t.Parallel()` below.
 If we do not do that, most or all tests will receive an unexpected value for
 `tt`, or a value that changes as they're running.
 
-### Functional Options
+### 🟢 Functional Options
 
 Functional options is a pattern in which you declare an opaque `Option` type
 that records information in some internal struct. You accept a variadic number
@@ -3877,7 +3839,7 @@ See also,
 <!-- TODO: replace this with parameter structs and functional options, when to
 use one vs other -->
 
-## Linting
+## 🟢 Linting
 
 More importantly than any "blessed" set of linters, lint consistently across a
 codebase.
