@@ -1,10 +1,6 @@
 # Go Style Guide
 
 
-## Table of Contents
-
-__TOC__
-
 ## Introduction
 
 [Original Uber Introduction](https://github.com/uber-go/guide/blob/master/style.md#introduction)
